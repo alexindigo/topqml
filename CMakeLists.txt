@@ -79,3 +79,15 @@ install(TARGETS topqml
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Top/
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/qt6/qml/Top
 )
+
+include(CTest)
+if(BUILD_TESTING)
+    find_program(QML_RUNNER NAMES qml6 qml HINTS /usr/lib/qt6/bin)
+    if(QML_RUNNER)
+        add_test(NAME smoke COMMAND ${QML_RUNNER} ${CMAKE_CURRENT_SOURCE_DIR}/test/smoke.qml)
+        set_tests_properties(smoke PROPERTIES
+            ENVIRONMENT "QML_IMPORT_PATH=${CMAKE_CURRENT_BINARY_DIR};QT_QPA_PLATFORM=offscreen;QT_FORCE_STDERR_LOGGING=1"
+            TIMEOUT 30
+        )
+    endif()
+endif()
