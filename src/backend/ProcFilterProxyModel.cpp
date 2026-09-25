@@ -39,6 +39,11 @@ bool ProcFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex& so
 		user.toStdString(), m_filter.toStdString());
 }
 
+bool ProcFilterProxyModel::matchesFilterRow(size_t pid, const std::string& name, const std::string& cmd,
+	const std::string& user, const std::string& filter) {
+	return Proc::matches_filter_row(pid, name, cmd, user, filter);
+}
+
 bool ProcFilterProxyModel::lessThan(const QModelIndex& left, const QModelIndex& right) const {
 	const auto model = qobject_cast<const ProcessModel*>(sourceModel());
 	if (not model)

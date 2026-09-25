@@ -11,6 +11,9 @@
 #include <QSortFilterProxyModel>
 #include <QtQmlIntegration/qqmlintegration.h>
 
+#include <cstddef>
+#include <string>
+
 QT_BEGIN_NAMESPACE
 class QQmlEngine;
 class QJSEngine;
@@ -30,6 +33,11 @@ public:
 
 	//* Qt-side sort owner: proxy sorts by column in one call
 	Q_INVOKABLE void sortBy(int column, bool descending);
+
+	//* btop matches_filter core exposed for C++ consumers building their own
+	//* proxies (vostop's ProcGrouped) — same matcher filterAcceptsRow uses
+	static bool matchesFilterRow(size_t pid, const std::string& name, const std::string& cmd,
+		const std::string& user, const std::string& filter);
 
 protected:
 	bool filterAcceptsRow(int sourceRow, const QModelIndex& sourceParent) const override;

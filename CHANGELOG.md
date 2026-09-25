@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.1.1] — 2026-09-24
+
+### Feature
+
+topqml becomes the family's first C++-consumable library: the public
+backend headers install to `include/topqml/`, the CMake export is
+completed (`topqml::topqml` target, `topqmlConfig.cmake` +
+version file), and Qt6::Core/Qml move to the public link interface so
+`find_package(topqml)` consumers compile and link against the installed
+package. `ProcFilterProxyModel` gains a static `matchesFilterRow`
+wrapper over the btop matcher — the one collector symbol vostop's
+`ProcGrouped` calls directly. No behavior changes; the QML surface is
+identical. Rides along: the `TopConfig.h` comment now attributes the
+defaults table to `Settings.h` (extraction addendum item B1).
+
+- Ship C++ headers and CMake package config (head commit of this release)
+
 ## [0.1.0] — 2026-09-24
 
 ### Feature

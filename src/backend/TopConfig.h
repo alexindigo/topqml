@@ -5,7 +5,7 @@
  * thread-safe, string-keyed static API (getB/getS/getI + setB/setS/setI)
  * and the same per-key typed C++ accessors, over a mutex-guarded cache
  * backed by the defaults table lifted verbatim from vostop's
- * src/backend/Settings.cpp. Typed QML properties cover the consumer-facing
+ * src/backend/Settings.h. Typed QML properties cover the consumer-facing
  * subset; every other key stays reachable through the static API and the
  * C++ accessors. The library persists nothing — policy belongs to the
  * consumer.

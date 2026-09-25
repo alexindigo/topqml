@@ -15,6 +15,7 @@ qt_policy(SET QTP0001 NEW)
 qt_policy(SET QTP0004 NEW)
 
 include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 set(TOPQML_SOURCES
     src/collect/tools_qt.h
@@ -58,13 +59,15 @@ qt_add_qml_module(topqml
         ${TOPQML_SOURCES}
 )
 
-target_include_directories(topqml PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/backend
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/collect
+target_include_directories(topqml
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/backend>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/collect>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 
-target_link_libraries(topqml PRIVATE
+target_link_libraries(topqml PUBLIC
     Qt6::Core Qt6::Qml
 )
 
@@ -76,8 +79,39 @@ install(TARGETS topqml
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+#? C++ consumption: public headers (Monitors, ProcessModel, ProcFilterProxyModel,
+#? TopConfig, snapshots, …) land flat in include/topqml/
+install(DIRECTORY src/backend/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/topqml
+    FILES_MATCHING PATTERN "*.h"
+)
+
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/Top/
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/qt6/qml/Top
+)
+
+install(EXPORT topqmlTargets
+    FILE topqmlTargets.cmake
+    NAMESPACE topqml::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/topqml
+)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/topqmlConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/topqmlConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/topqml
+)
+
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/topqmlConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMinorVersion
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/topqmlConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/topqmlConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/topqml
 )
 
 include(CTest)
