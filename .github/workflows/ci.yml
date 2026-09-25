@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install dependencies
+        run: |
+          pacman -Syu --noconfirm --disable-download-timeout
+          pacman -S --noconfirm --needed base-devel cmake git qt6-base qt6-declarative
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+      - name: qmllint
+        run: |
+          /usr/lib/qt6/bin/qmllint -i build/Top/qmldir test/smoke.qml examples/minimal/Main.qml
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
