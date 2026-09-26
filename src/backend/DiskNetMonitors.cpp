@@ -1,11 +1,9 @@
 /*
- * vostop — DiskMonitor / NetMonitor (implementation).
+ * topqml — DiskMonitor / NetIfacesModel (implementation).
  */
 #include "DiskNetMonitors.h"
 
-#include "CollectorWorker.h"
 #include "TopEngine.h"
-#include "../collect/disk_net.h"
 
 #include <QQmlEngine>
 
@@ -76,52 +74,66 @@ void DiskMonitor::update(const DiskSnapshot& snapshot) {
 	}
 }
 
-NetMonitor::NetMonitor(QObject* parent) : QObject(parent) { TopEngine::ensureStarted(); }
+NetIfacesModel::NetIfacesModel(QObject* parent) : QAbstractListModel(parent) { TopEngine::ensureStarted(); }
 
-NetMonitor& NetMonitor::instance() {
-	static NetMonitor inst;
+NetIfacesModel& NetIfacesModel::instance() {
+	static NetIfacesModel inst;
 	return inst;
 }
 
-NetMonitor* NetMonitor::create(QQmlEngine* engine, QJSEngine* jsEngine) {
+NetIfacesModel* NetIfacesModel::create(QQmlEngine* engine, QJSEngine* jsEngine) {
 	Q_UNUSED(engine);
 	Q_UNUSED(jsEngine);
-	NetMonitor* obj = &instance();
+	NetIfacesModel* obj = &instance();
 	QQmlEngine::setObjectOwnership(obj, QQmlEngine::CppOwnership);
 	return obj;
 }
 
-void NetMonitor::selectIface(const QString& iface) {
-	Net::set_selected_iface(iface.toStdString());
-	//? in-memory only — persistence is the consumer's job (TopConfig.netIface
-	//? covers the collector-side read; vostop persisted the picker choice here)
+int NetIfacesModel::rowCount(const QModelIndex& parent) const {
+	return parent.isValid() ? 0 : static_cast<int>(m_ifaces.size());
 }
 
-void NetMonitor::update(const NetSnapshot& snapshot) {
-	bool changed = m_iface != snapshot.iface or m_ipv4 != snapshot.ipv4 or m_ipv6 != snapshot.ipv6
-		or m_connected != snapshot.connected
-		or m_downSpeed != snapshot.downSpeed or m_upSpeed != snapshot.upSpeed
-		or m_linkSpeed != snapshot.linkSpeed
-		or m_downTotal != snapshot.downTotal or m_upTotal != snapshot.upTotal;
-	if (changed) {
-		m_iface = snapshot.iface;
-		m_ipv4 = snapshot.ipv4;
-		m_ipv6 = snapshot.ipv6;
-		m_connected = snapshot.connected;
-		m_downSpeed = snapshot.downSpeed;
-		m_upSpeed = snapshot.upSpeed;
-		m_linkSpeed = snapshot.linkSpeed;
-		m_downTotal = snapshot.downTotal;
-		m_upTotal = snapshot.upTotal;
-		emit netChanged();
+QVariant NetIfacesModel::data(const QModelIndex& index, int role) const {
+	if (not index.isValid() or index.row() < 0 or index.row() >= static_cast<int>(m_ifaces.size()))
+		return {};
+	const auto& iface = m_ifaces.at(index.row());
+	switch (role) {
+		case NameRole: return iface.name;
+		case Ipv4Role: return iface.ipv4;
+		case Ipv6Role: return iface.ipv6;
+		case ConnectedRole: return iface.connected;
+		case LinkSpeedRole: return iface.linkSpeed;
+		case DownSpeedRole: return iface.downSpeed;
+		case UpSpeedRole: return iface.upSpeed;
+		case DownTotalRole: return iface.downTotal;
+		case UpTotalRole: return iface.upTotal;
+		case DownHistoryRole: return QVariant::fromValue(iface.downHistory);
+		case UpHistoryRole: return QVariant::fromValue(iface.upHistory);
 	}
-	if (m_ifaces != snapshot.ifaces) {
-		m_ifaces = snapshot.ifaces;
-		emit ifacesChanged();
-	}
-	if (m_downHistory != snapshot.downHistory or m_upHistory != snapshot.upHistory) {
-		m_downHistory = snapshot.downHistory;
-		m_upHistory = snapshot.upHistory;
-		emit historyChanged();
-	}
+	return {};
+}
+
+QHash<int, QByteArray> NetIfacesModel::roleNames() const {
+	return {
+		{ NameRole, "name" },
+		{ Ipv4Role, "ipv4" },
+		{ Ipv6Role, "ipv6" },
+		{ ConnectedRole, "connected" },
+		{ LinkSpeedRole, "linkSpeed" },
+		{ DownSpeedRole, "downSpeed" },
+		{ UpSpeedRole, "upSpeed" },
+		{ DownTotalRole, "downTotal" },
+		{ UpTotalRole, "upTotal" },
+		{ DownHistoryRole, "downHistory" },
+		{ UpHistoryRole, "upHistory" },
+	};
+}
+
+void NetIfacesModel::update(const NetSnapshot& snapshot) {
+	//? Full reset per tick — interfaces number in the single digits and the
+	//? snapshot replaces every row's stats anyway; a row-diff is a future
+	//? optimization, deliberately not done ("don't do too much on top of it").
+	beginResetModel();
+	m_ifaces = snapshot.ifaces;
+	endResetModel();
 }

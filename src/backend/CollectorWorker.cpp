@@ -14,6 +14,7 @@
 #include <QLoggingCategory>
 #include <QThread>
 
+#include <algorithm>
 #include <fstream>
 
 Q_LOGGING_CATEGORY(vostopWorker, "vostop.worker")
@@ -279,25 +280,29 @@ void CollectorWorker::tick() { //? tick counter for slow cadences (fdinfo walk e
 
 	NetSnapshot ns;
 	try {
-		auto& net = Net::collect();
-		if (not Net::selected_iface.empty()) {
-			ns.iface = QString::fromStdString(Net::selected_iface);
-			for (const auto& iface : Net::interfaces)
-				ns.ifaces.append(QString::fromStdString(iface));
-			auto& n = net;
-			ns.ipv4 = QString::fromStdString(n.ipv4);
-			ns.ipv6 = QString::fromStdString(n.ipv6);
-			ns.connected = n.connected;
-		ns.downSpeed = static_cast<qint64>(n.stat.at("download").speed);
-		ns.upSpeed = static_cast<qint64>(n.stat.at("upload").speed);
-		ns.linkSpeed = static_cast<qint64>(n.link_speed);
-			ns.downTotal = static_cast<qint64>(n.stat.at("download").total);
-			ns.upTotal = static_cast<qint64>(n.stat.at("upload").total);
+		Net::collect(); //? populates current_net for every interface (return value is the legacy selected one)
+		ns.ifaces.reserve(static_cast<qsizetype>(Net::current_net.size()));
+		for (const auto& [name, n] : Net::current_net) {
+			NetSnapshot::Iface e;
+			e.name = QString::fromStdString(name);
+			e.ipv4 = QString::fromStdString(n.ipv4);
+			e.ipv6 = QString::fromStdString(n.ipv6);
+			e.connected = n.connected;
+			e.linkSpeed = static_cast<qint64>(n.link_speed);
+			e.downSpeed = static_cast<qint64>(n.stat.at("download").speed);
+			e.upSpeed = static_cast<qint64>(n.stat.at("upload").speed);
+			e.downTotal = static_cast<qint64>(n.stat.at("download").total);
+			e.upTotal = static_cast<qint64>(n.stat.at("upload").total);
 			for (const long long v : n.bandwidth.at("download"))
-				ns.downHistory.append(static_cast<double>(v));
+				e.downHistory.append(static_cast<double>(v));
 			for (const long long v : n.bandwidth.at("upload"))
-				ns.upHistory.append(static_cast<double>(v));
+				e.upHistory.append(static_cast<double>(v));
+			ns.ifaces.append(e);
 		}
+		//? Deterministic order (the old auto-select's): busiest interface first
+		std::sort(ns.ifaces.begin(), ns.ifaces.end(), [](const NetSnapshot::Iface& a, const NetSnapshot::Iface& b) {
+			return a.downTotal + a.upTotal > b.downTotal + b.upTotal;
+		});
 	} catch (const std::exception& e) {
 		qCWarning(vostopWorker) << "net collect failed:" << e.what();
 	}
@@ -433,8 +438,9 @@ void CollectorWorker::tick() { //? tick counter for slow cadences (fdinfo walk e
 		} else {
 			qCDebug(vostopWorker) << "tick: disk no mounts";
 		}
-		qCDebug(vostopWorker) << "tick: net iface" << ns.iface << "down" << ns.downSpeed / 1024 << "KiB/s up" << ns.upSpeed / 1024
-			<< "KiB/s ifaces" << ns.ifaces.size();
+		qCDebug(vostopWorker) << "tick: net ifaces" << ns.ifaces.size()
+			<< (ns.ifaces.isEmpty() ? QString() : ns.ifaces.first().name)
+			<< (ns.ifaces.isEmpty() ? 0 : ns.ifaces.first().downSpeed / 1024) << "KiB/s down";
 		//? Phase-5 diagnostics: gpus, sensors, per-pid gpu
 		QString topGpuName;
 		double topGpuPct = -1.0;

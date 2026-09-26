@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.2.0] — 2026-09-25
+
+### Breaking
+
+The single-interface selection concept leaves the library: `NetMonitor`
+(and its `iface`/`selectIface`/`ifaces` API) is removed, and the
+`net_iface` config key becomes vestigial — topqml no longer picks an
+interface for you. The collector already tracked every interface; the
+only change is what reaches QML. Only known consumer is vostop, which
+migrates in lockstep.
+
+- Expose all network interfaces via NetIfacesModel, drop selection (head commit of this release)
+
+### Feature
+
+`NetIfacesModel` (singleton `QAbstractListModel`) exposes one row per
+interface the collector tracks — roles one-to-one with the collector's
+`net_info`: `name`, `ipv4`, `ipv6`, `connected`, `linkSpeed`,
+`downSpeed`, `upSpeed`, `downTotal`, `upTotal`, `downHistory`,
+`upHistory` (per-interface history rings included, exactly as collected).
+Rows are ordered busiest-first (total down+up bytes descending,
+deterministic). The library holds no selection, no aggregate, and no
+persistence — consumers decide what to display. `DiskMonitor` and all
+other monitors are unchanged. Also fixes the CMake `VERSION` missed by
+the 0.1.1 bump.
+
+- Expose all network interfaces via NetIfacesModel, drop selection (head commit of this release)
+
 ## [0.1.1] — 2026-09-24
 
 ### Feature

@@ -1,12 +1,14 @@
 /*
- * vostop — DiskMonitor / NetMonitor: GUI-thread property holders fed by the
- * worker's disk/net collectors (stolen code; phase 4).
+ * topqml — DiskMonitor / NetIfacesModel: GUI-thread holders fed by the
+ * worker's disk/net collectors. NetIfacesModel exposes every interface the
+ * collector tracks — the library holds no selection; consumers decide what
+ * to display.
  */
 #pragma once
 
-#include <QObject>
+#include <QAbstractListModel>
 #include <QList>
-#include <QStringList>
+#include <QVector>
 #include <QtQmlIntegration/qqmlintegration.h>
 
 #include "snapshots.h"
@@ -56,60 +58,44 @@ private:
 	PressureSnapshot m_ioPressure;
 };
 
-class NetMonitor : public QObject {
+//* One row per interface the collector tracks (current_net), roles 1:1 with
+//* net_info. No selection, no aggregate — consumers decide what to display.
+class NetIfacesModel : public QAbstractListModel {
 	Q_OBJECT
-	QML_SINGLETON
 	QML_ELEMENT
-	Q_PROPERTY(QString iface READ iface WRITE selectIface NOTIFY netChanged FINAL)
-	Q_PROPERTY(QStringList ifaces READ ifaces NOTIFY ifacesChanged FINAL)
-	Q_PROPERTY(QString ipv4 READ ipv4 NOTIFY netChanged FINAL)
-	Q_PROPERTY(QString ipv6 READ ipv6 NOTIFY netChanged FINAL)
-	Q_PROPERTY(bool connected READ connected NOTIFY netChanged FINAL)
-	Q_PROPERTY(qint64 downSpeed READ downSpeed NOTIFY netChanged FINAL)
-	Q_PROPERTY(qint64 upSpeed READ upSpeed NOTIFY netChanged FINAL)
-	Q_PROPERTY(qint64 linkSpeed READ linkSpeed NOTIFY netChanged FINAL)
-	Q_PROPERTY(qint64 downTotal READ downTotal NOTIFY netChanged FINAL)
-	Q_PROPERTY(qint64 upTotal READ upTotal NOTIFY netChanged FINAL)
-	Q_PROPERTY(QList<double> downHistory READ downHistory NOTIFY historyChanged FINAL)
-	Q_PROPERTY(QList<double> upHistory READ upHistory NOTIFY historyChanged FINAL)
+	QML_SINGLETON
 
 public:
+	enum Roles {
+		NameRole = Qt::UserRole + 1,
+		Ipv4Role,
+		Ipv6Role,
+		ConnectedRole,
+		LinkSpeedRole,
+		DownSpeedRole,
+		UpSpeedRole,
+		DownTotalRole,
+		UpTotalRole,
+		DownHistoryRole,
+		UpHistoryRole,
+	};
+	Q_ENUM(Roles)
+
 private:
-	explicit NetMonitor(QObject* parent = nullptr);
+	explicit NetIfacesModel(QObject* parent = nullptr);
 
 public:
 
-	static NetMonitor& instance();
-	static NetMonitor* create(QQmlEngine* engine, QJSEngine* jsEngine);
+	static NetIfacesModel& instance();
+	static NetIfacesModel* create(QQmlEngine* engine, QJSEngine* jsEngine);
 
-	QString iface() const { return m_iface; }
-	QStringList ifaces() const { return m_ifaces; }
-	QString ipv4() const { return m_ipv4; }
-	QString ipv6() const { return m_ipv6; }
-	bool connected() const { return m_connected; }
-	qint64 downSpeed() const { return m_downSpeed; }
-	qint64 upSpeed() const { return m_upSpeed; }
-	qint64 linkSpeed() const { return m_linkSpeed; }
-	qint64 downTotal() const { return m_downTotal; }
-	qint64 upTotal() const { return m_upTotal; }
-	QList<double> downHistory() const { return m_downHistory; }
-	QList<double> upHistory() const { return m_upHistory; }
-
-	//* QML iface picker (empty string = auto)
-	Q_INVOKABLE void selectIface(const QString& iface);
+	int rowCount(const QModelIndex& parent = QModelIndex()) const override;
+	QVariant data(const QModelIndex& index, int role) const override;
+	QHash<int, QByteArray> roleNames() const override;
 
 public slots:
 	void update(const NetSnapshot& snapshot);
 
-signals:
-	void netChanged();
-	void ifacesChanged();
-	void historyChanged();
-
 private:
-	QString m_iface, m_ipv4, m_ipv6;
-	QStringList m_ifaces;
-	bool m_connected = false;
-	qint64 m_downSpeed = 0, m_upSpeed = 0, m_linkSpeed = 0, m_downTotal = 0, m_upTotal = 0;
-	QList<double> m_downHistory, m_upHistory;
+	QVector<NetSnapshot::Iface> m_ifaces;
 };

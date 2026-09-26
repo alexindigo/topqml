@@ -37,6 +37,17 @@ Item {
             if (ProcessModel.totalProcs < 1)
                 failures.push("ProcessModel.totalProcs not populated")
 
+            var netRows = NetIfacesModel.rowCount()
+            console.warn("NetIfacesModel rows:", netRows)
+            if (netRows < 1)
+                failures.push("NetIfacesModel.rowCount < 1")
+            for (var r = 0; r < netRows; r++) {
+                var nidx = NetIfacesModel.index(r, 0)
+                console.warn("net", NetIfacesModel.data(nidx, NetIfacesModel.NameRole),
+                             "down", NetIfacesModel.data(nidx, NetIfacesModel.DownTotalRole),
+                             "up", NetIfacesModel.data(nidx, NetIfacesModel.UpTotalRole))
+            }
+
             var total = proxy.rowCount()
             proxy.filter = "definitely-no-such-process-name-xyz"
             var filtered = proxy.rowCount()

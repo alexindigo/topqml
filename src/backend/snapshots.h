@@ -6,6 +6,7 @@
 
 #include <QMetaType>
 #include <QList>
+#include <QVector>
 
 struct PressureSnapshot {
 	double some[3] = {0.0, 0.0, 0.0}; //? avg10/60/300
@@ -109,15 +110,18 @@ struct DiskSnapshot {
 };
 
 struct NetSnapshot {
-	QString iface;                       //? selected interface
-	QStringList ifaces;                  //? all interfaces
-	QString ipv4, ipv6;
-	bool connected = false;
-	qint64 downSpeed = 0, upSpeed = 0;   //? bytes/s
-	qint64 downTotal = 0, upTotal = 0;
-	qint64 linkSpeed = 0;                //? link rate bytes/s (0 = unknown, e.g. virtual iface)
-	QList<double> downHistory;           //? ring, oldest → newest
-	QList<double> upHistory;
+	//? One entry per interface (collector already tracks all of them; the
+	//? library holds no selection — consumers decide what to display)
+	struct Iface {
+		QString name, ipv4, ipv6;
+		bool connected = false;
+		qint64 linkSpeed = 0;                //? link rate bytes/s (0 = unknown, e.g. virtual iface)
+		qint64 downSpeed = 0, upSpeed = 0;   //? bytes/s
+		qint64 downTotal = 0, upTotal = 0;   //? bytes
+		QList<double> downHistory;           //? ring, oldest → newest
+		QList<double> upHistory;
+	};
+	QVector<Iface> ifaces;               //? sorted by total down+up bytes, descending
 };
 Q_DECLARE_METATYPE(DiskSnapshot)
 Q_DECLARE_METATYPE(NetSnapshot)

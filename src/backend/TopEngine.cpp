@@ -36,7 +36,7 @@ struct Engine {
 		QObject::connect(worker, &CollectorWorker::procDetailUpdated, &ProcessModel::instance(), &ProcessModel::detailUpdated);
 		QObject::connect(worker, &CollectorWorker::openFilesUpdated, &ProcessModel::instance(), &ProcessModel::openFilesUpdated);
 		QObject::connect(worker, &CollectorWorker::diskUpdated, &DiskMonitor::instance(), &DiskMonitor::update);
-		QObject::connect(worker, &CollectorWorker::netUpdated, &NetMonitor::instance(), &NetMonitor::update);
+		QObject::connect(worker, &CollectorWorker::netUpdated, &NetIfacesModel::instance(), &NetIfacesModel::update);
 		QObject::connect(worker, &CollectorWorker::gpuUpdated, &GpuMonitor::instance(), &GpuMonitor::update);
 		QObject::connect(worker, &CollectorWorker::sensorsUpdated, &SensorsMonitor::instance(), &SensorsMonitor::update);
 		//? Poll-interval setting applies live (queued into the worker thread)
